@@ -60,7 +60,16 @@ class Assignment:
 
     # To be done
     def selectUnassignedCellDegreeHeuristic(self):
-        pass
+
+        nextCell = (0,0)
+        nbCellConstraints=len(self.getReverseOrderedDomainValues(0,0))
+        for i in range(self.__sudokuLength):
+            for j in range(self.__sudokuLength):
+                nbOtherCellConstraints=len(self.getReverseOrderedDomainValues(i,j))
+                if nbOtherCellConstraints>nbCellConstraints:
+                    nextCell = (i,j)
+                    nbCellConstraints=nbOtherCellConstraints
+        return nextCell
 
     def __str__(self):
         # return sudoku in a string
@@ -91,6 +100,9 @@ class Assignment:
     def getOrderedDomainValues(self, i, j):
         return self.leastConstrainingValue(i, j)
 
+    def getReverseOrderedDomainValues(self, i, j):
+        return self.mostConstrainingValue(i, j)
+
     def backtracking(self):
         # First, check if the sudoku is complete
         if self.isComplete():
@@ -98,37 +110,79 @@ class Assignment:
 
         # Select the next cell thanks to the heuristics (MRV + Degree heuristic)
         cellI, cellJ = self.selectUnassignedCellMRV()
+        cellI2, cellJ2 = self.selectUnassignedCellDegreeHeuristic()
 
         # Get the domain values ordered by preference
         orderedDomainValues = self.getOrderedDomainValues(cellI, cellJ)
+        orderedDomainValues2=self.getOrderedDomainValues(cellI2,cellJ2)
+        reverseOrderedDomainValues=self.getReverseOrderedDomainValues(cellI2, cellJ2)
 
         initialDomainIJ = self.__sudoku[cellI][cellJ].getDomain()
+        initialDomainIJ2=self.__sudoku[cellI2][cellJ2].getDomain()
 
         # Get the position of all the cells applying a constraint on the chosen cell (= neighbours)
         cellConstraints = self.getCellConstraints(cellI, cellJ)
+        cellConstraints2=self.getCellConstraints(cellI2,cellJ2)
 
         # Create the arc queue for AC-3 checking
-        AC3Queue = []
-        for (tmpI, tmpJ) in cellConstraints:
-            AC3Queue.append(((tmpI, tmpJ), (cellI, cellJ)))
+        #AC3Queue = []
+        #for (tmpI, tmpJ) in cellConstraints:
+        #    AC3Queue.append(((tmpI, tmpJ), (cellI, cellJ)))
 
         # Iterate through each remaining legal values (ordered by preference)
-        for value in orderedDomainValues:
+        #for value in orderedDomainValues:
             # Check if putting the value in the cell results in a consistent assignment
-            if self.checkValueIsConsistent(cellI, cellJ, value):
+         #   if self.checkValueIsConsistent(cellI, cellJ, value):
 
-                self.__sudoku[cellI][cellJ].setDomain([value])
+          #      self.__sudoku[cellI][cellJ].setDomain([value])
+
+           #     allRemovals = [] # Triplet (i, j, value) of all the removals (from cells' domain) made in the iteration
+
+                # AC-3 checking
+            #    if self.AC3(copy(AC3Queue), allRemovals):
+             #       self.__sudoku[cellI][cellJ].setValue(value)
+
+                    # Remove inconsistent values in the neighbours' domain
+                    # (Note : normally already done in AC-3 checking)
+              #      for (tmpI, tmpJ) in cellConstraints:
+               #         self.removeInconsistentValues(tmpI, tmpJ, cellI, cellJ, allRemovals)
+
+                    # Continue backtracking with the new assignment
+                #    result = self.backtracking()
+
+                 #   if result:
+                        # Solution has been found
+                  #      return result
+
+                    # If the solution has not been found, remove the value to test a new one
+                   # self.__sudoku[cellI][cellJ].setValue(None)
+
+                # Replace the values in the domains as they were before the iteration
+                #for (tmpI, tmpJ, tmpValue) in allRemovals:
+                 #   self.__sudoku[tmpI][tmpJ].addValueToDomain(tmpValue)
+
+                # Reset the domain of the chosen cell as it was before the iteration
+                #self.__sudoku[cellI][cellJ].setDomain(initialDomainIJ)
+        #Degree heuristic method
+        AC3Queue = []
+        for (tmpI2, tmpJ2) in cellConstraints2:
+            AC3Queue.append(((tmpI2, tmpJ2), (cellI2, cellJ2)))
+        for value in reverseOrderedDomainValues:
+            # Check if putting the value in the cell results in a consistent assignment
+            if self.checkValueIsConsistent(cellI2, cellJ2, value):
+
+                self.__sudoku[cellI2][cellJ2].setDomain([value])
 
                 allRemovals = [] # Triplet (i, j, value) of all the removals (from cells' domain) made in the iteration
 
                 # AC-3 checking
                 if self.AC3(copy(AC3Queue), allRemovals):
-                    self.__sudoku[cellI][cellJ].setValue(value)
+                    self.__sudoku[cellI2][cellJ2].setValue(value)
 
                     # Remove inconsistent values in the neighbours' domain
                     # (Note : normally already done in AC-3 checking)
-                    for (tmpI, tmpJ) in cellConstraints:
-                        self.removeInconsistentValues(tmpI, tmpJ, cellI, cellJ, allRemovals)
+                    for (tmpI2, tmpJ2) in cellConstraints:
+                        self.removeInconsistentValues(tmpI2, tmpJ2, cellI2, cellJ2, allRemovals)
 
                     # Continue backtracking with the new assignment
                     result = self.backtracking()
@@ -138,15 +192,14 @@ class Assignment:
                         return result
 
                     # If the solution has not been found, remove the value to test a new one
-                    self.__sudoku[cellI][cellJ].setValue(None)
+                    self.__sudoku[cellI2][cellJ2].setValue(None)
 
                 # Replace the values in the domains as they were before the iteration
-                for (tmpI, tmpJ, tmpValue) in allRemovals:
-                    self.__sudoku[tmpI][tmpJ].addValueToDomain(tmpValue)
+                for (tmpI2, tmpJ2, tmpValue) in allRemovals:
+                    self.__sudoku[tmpI2][tmpJ2].addValueToDomain(tmpValue)
 
                 # Reset the domain of the chosen cell as it was before the iteration
-                self.__sudoku[cellI][cellJ].setDomain(initialDomainIJ)
-
+                self.__sudoku[cellI][cellJ].setDomain(initialDomainIJ2)
         # No solution has been found
         return False
 
@@ -174,6 +227,32 @@ class Assignment:
 
         # Order values
         numConstrainedCells = dict(sorted(numConstrainedCells.items(), key=lambda item: item[1]))
+        return list(numConstrainedCells.keys())
+
+    def mostConstrainingValue(self, i, j):
+        # Return the domain of the cell (i, j) ordered by
+        # the number of cells constrained for each value
+
+        cellDomain = self.__sudoku[i][j].getDomain()
+        orderedDomainValues = []
+        numConstrainedCells = dict()
+
+        for value in cellDomain:
+            cellConstraints = self.getCellConstraints(i, j) # Neighbours
+            nConstrained = 0 # Number of cells constrained by choosing this value
+
+            for (tmpI, tmpJ) in cellConstraints:
+                if not self.__sudoku[tmpI][tmpJ].hasValue():
+                    if value in self.__sudoku[tmpI][tmpJ].getDomain():
+                        # The value is still present in the neighbour's domain
+                        # which means choosing this value will reduce the legal values
+                        # of the neighbour
+                        nConstrained += 1
+
+            numConstrainedCells[value] = nConstrained
+
+        # Order values
+        numConstrainedCells = dict(sorted(numConstrainedCells.items(), key=lambda item: item[1], reverse=True))
         return list(numConstrainedCells.keys())
 
     def getCellConstraints(self, i, j):
