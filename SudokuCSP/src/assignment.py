@@ -62,10 +62,10 @@ class Assignment:
     def selectUnassignedCellDegreeHeuristic(self):
 
         nextCell = (0,0)
-        nbCellConstraints=len(self.getReverseOrderedDomainValues(0,0))
+        nbCellConstraints=self.getNbConstraints(0, 0)
         for i in range(self.__sudokuLength):
             for j in range(self.__sudokuLength):
-                nbOtherCellConstraints=len(self.getReverseOrderedDomainValues(i,j))
+                nbOtherCellConstraints=self.getNbConstraints(i, j)
                 if nbOtherCellConstraints>nbCellConstraints:
                     nextCell = (i,j)
                     nbCellConstraints=nbOtherCellConstraints
@@ -100,8 +100,8 @@ class Assignment:
     def getOrderedDomainValues(self, i, j):
         return self.leastConstrainingValue(i, j)
 
-    def getReverseOrderedDomainValues(self, i, j):
-        return self.mostConstrainingValue(i, j)
+    #def getReverseOrderedDomainValues(self, i, j):
+        #return self.mostConstrainingValue(i, j)
 
     def backtracking(self):
         # First, check if the sudoku is complete
@@ -115,7 +115,7 @@ class Assignment:
         # Get the domain values ordered by preference
         orderedDomainValues = self.getOrderedDomainValues(cellI, cellJ)
         orderedDomainValues2=self.getOrderedDomainValues(cellI2,cellJ2)
-        reverseOrderedDomainValues=self.getReverseOrderedDomainValues(cellI2, cellJ2)
+        #reverseOrderedDomainValues=self.getReverseOrderedDomainValues(cellI2, cellJ2)
 
         initialDomainIJ = self.__sudoku[cellI][cellJ].getDomain()
         initialDomainIJ2=self.__sudoku[cellI2][cellJ2].getDomain()
@@ -167,7 +167,7 @@ class Assignment:
         AC3Queue = []
         for (tmpI2, tmpJ2) in cellConstraints2:
             AC3Queue.append(((tmpI2, tmpJ2), (cellI2, cellJ2)))
-        for value in reverseOrderedDomainValues:
+        for value in orderedDomainValues2:
             # Check if putting the value in the cell results in a consistent assignment
             if self.checkValueIsConsistent(cellI2, cellJ2, value):
 
@@ -229,17 +229,17 @@ class Assignment:
         numConstrainedCells = dict(sorted(numConstrainedCells.items(), key=lambda item: item[1]))
         return list(numConstrainedCells.keys())
 
-    def mostConstrainingValue(self, i, j):
+    def getNbConstraints(self, i, j):
         # Return the domain of the cell (i, j) ordered by
         # the number of cells constrained for each value
 
         cellDomain = self.__sudoku[i][j].getDomain()
         orderedDomainValues = []
-        numConstrainedCells = dict()
-
+        #numConstrainedCells = dict()
+        nConstrained = 0
         for value in cellDomain:
             cellConstraints = self.getCellConstraints(i, j) # Neighbours
-            nConstrained = 0 # Number of cells constrained by choosing this value
+             # Number of cells constrained by choosing this value
 
             for (tmpI, tmpJ) in cellConstraints:
                 if not self.__sudoku[tmpI][tmpJ].hasValue():
@@ -249,11 +249,11 @@ class Assignment:
                         # of the neighbour
                         nConstrained += 1
 
-            numConstrainedCells[value] = nConstrained
+            #numConstrainedCells[value] = nConstrained
 
         # Order values
-        numConstrainedCells = dict(sorted(numConstrainedCells.items(), key=lambda item: item[1], reverse=True))
-        return list(numConstrainedCells.keys())
+        #numConstrainedCells = dict(sorted(numConstrainedCells.items(), key=lambda item: item[1], reverse=True))
+        return nConstrained #list(numConstrainedCells.keys())
 
     def getCellConstraints(self, i, j):
         # Return a list containing all the coordinates of the cells applying
